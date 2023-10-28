@@ -1,0 +1,4 @@
+route = "webhook"
+encodings = ["texthtml"]
+arguments = [ {name="addr", argument_type="Str"}, {name="msg", argument_type="Str"}]
+cacheable = true

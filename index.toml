@@ -1,0 +1,4 @@
+route = "test3"
+encodings = ["texthtml"]
+arguments = [{ name = "url", argument_type = "Str"}]
+cacheable = true
