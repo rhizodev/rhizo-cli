@@ -2,6 +2,8 @@
 name = "rhizo-cli"
 version = "0.0.1"
 edition = "2021"
+description = "Command-line interface to the rhizo network."
+license = "MIT"
 
 [[bin]]
 name = "rhizo-cli"
