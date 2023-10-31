@@ -46,11 +46,11 @@ pub fn test_module(path: &str){
     let invoke_res = start_fn.call(&mut store, &[]); 
     
     if invoke_res.is_err(){
-        println!("Failed.");
+        println!("Failed module tests.");
         return
     }
         
-    println!("Passed.");
+    println!("All assertions passed.");
 }
 
 pub fn view(collection: &str, seed: &str) -> Result<(), Error> {
@@ -312,7 +312,7 @@ pub async fn deploy(wasm_path: &str, config_path: &str, operation_byte: u8) -> R
     let client = Client::new();
     let request = Request::builder()
         .method("POST")
-        .uri("http://euro.rhizo.dev/ingest")
+        .uri("http://localhost:8080/ingest")
         .header(CONTENT_TYPE, "application/json")
         .body(Body::from(route_source.try_to_vec().expect("route data serializes")))
         .unwrap();
@@ -343,8 +343,10 @@ pub async fn deploy(wasm_path: &str, config_path: &str, operation_byte: u8) -> R
     } else {
         if response.status().as_str().eq("413"){
             return Err(Error::new("Payload too large. WASM module must gzip to less than 2mb."))
+        } else {
+            return Err(Error::new(&format!("Error from rhizo server {:?}", response.status().as_str())))
         }
-        return Err(Error::new(format!("Error from Rhizo server {:?}", response.status()).as_str()))
+        //return Err(Error::new(format!("Error from Rhizo server {:?}", response.status()).as_str()))
     }
     Ok(())
 }

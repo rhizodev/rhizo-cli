@@ -40,7 +40,7 @@ async fn main() -> Result<(), ()> {
                     }
                     _ => {}
                 }
-            }
+            } else
             if command.to_lowercase().eq("yank"){
                 let try_wasm_path = args.get(2);
                 let try_api_config_path = args.get(3);
@@ -49,7 +49,7 @@ async fn main() -> Result<(), ()> {
                         match deploy(wasm_path, config_path, 1u8).await {
                             Ok(_) => {}
                             Err(err) => {
-                                eprintln!("[ERROR] deploy failed due to error: {}", err.message)
+                                eprintln!("[ERROR] yank failed due to error: {}", err.message)
                             }
                         }
                     }
