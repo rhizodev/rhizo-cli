@@ -312,7 +312,7 @@ pub async fn deploy(wasm_path: &str, config_path: &str, operation_byte: u8) -> R
     let client = Client::new();
     let request = Request::builder()
         .method("POST")
-        .uri("http://localhost:8080/ingest")
+        .uri("http://www.euro.rhizo.dev/ingest")
         .header(CONTENT_TYPE, "application/json")
         .body(Body::from(route_source.try_to_vec().expect("route data serializes")))
         .unwrap();
