@@ -13,10 +13,24 @@ use wasmer::{Module, Store};
 use wasmer_wasix::Pipe;
 use wasmer_wasix::{WasiEnvBuilder, capabilities::Capabilities, http::HttpClientCapabilityV1, capabilities::CapabilityThreadingV1};
 
+pub fn yank_route(seed: &str) -> Result<(), Error> {
+    let keypair = utils::get_keypair()?;
+    let program_pubkey = Pubkey::from_str("Ep1SV45cqumZmogwWFy6pVNvMpRerMZUUhSJTbTh2e58");
+
+    if program_pubkey.is_err() {        
+        return Err(Error::new("Unable to create pubkey for pre-configured program address"))
+    }
+
+    let connection = client::establish_connection()?;
+
+    client::yank_route(&keypair, &program_pubkey.unwrap(), &connection, seed).unwrap();
+    Ok(())
+}
+
 pub fn test_module(path: &str){
     println!("WARNING: Failing to use rhizo_sdk functions like tprintln and assert_eq as the exclusive methods to print output and assert within your test function may result in hanging tests.");
     let mut store = Store::default();
-    let mut module = Module::from_file(&store, "fn.wasm").expect("Failed to read Wasm module");
+    let mut module = Module::from_file(&store, path).expect("Failed to read Wasm module");
 
     let (mut stdin_tx, stdin_rx) = Pipe::channel();    
     let (stderr_tx, mut stderr_rx) = Pipe::channel();
@@ -312,7 +326,7 @@ pub async fn deploy(wasm_path: &str, config_path: &str, operation_byte: u8) -> R
     let client = Client::new();
     let request = Request::builder()
         .method("POST")
-        .uri("http://www.euro.rhizo.dev/ingest")
+        .uri("http://euro.rhizo.dev/ingest")
         .header(CONTENT_TYPE, "application/json")
         .body(Body::from(route_source.try_to_vec().expect("route data serializes")))
         .unwrap();
@@ -354,8 +368,7 @@ pub async fn deploy(wasm_path: &str, config_path: &str, operation_byte: u8) -> R
 pub fn ocb_alloc(seed: &str, size: usize) -> Result<(), Error> {
     let keypair = utils::get_keypair()?;
     let program_pubkey = Pubkey::from_str("Ep1SV45cqumZmogwWFy6pVNvMpRerMZUUhSJTbTh2e58")
-        .map_err(|_| Error::new("Unable to create program pubkey"))?;
-   
+        .map_err(|_| Error::new("Unable to create program pubkey"))?; 
     let connection = client::establish_connection().map_err(|_| Error::new("Unable to establish RPC connections"))?; 
     client::alloc_ocb(&keypair, &program_pubkey, &connection, &rhizo_types::SignedOnchainBytesUpdate { seed: seed.to_string(), bytes: rhizo_types::SignedOnchainBytes { inner: vec![0u8; size], owner_pubkey: keypair.pubkey().to_bytes()}, bump_seed: None, })    
 }

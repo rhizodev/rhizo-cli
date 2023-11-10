@@ -49,7 +49,6 @@ pub fn alloc_ocb(
         bump_seed: Some(bump_seed),
     };
 
-    println!("OCB PDA: {:?}", created_pda);
 
     let (_, bump_seed) = ProgramPubkey::find_program_address(
         &[b"_dev_socbs",
@@ -95,7 +94,6 @@ pub fn alloc_ocb(
                                request_update_instruction.clone(), 
     ], Some(&caller.pubkey()));
 
-    //if false{
     
     let fee_lamports = connection.get_fee_calculator_for_blockhash(&connection.get_latest_blockhash().unwrap()).unwrap().unwrap().calculate_fee(&message);
     let rent_exemption = connection.get_minimum_balance_for_rent_exemption(request_update_instruction.data.len()).unwrap();
@@ -108,14 +106,11 @@ pub fn alloc_ocb(
     if !confirmation {
         return Err(Error::new("Unable to submit transaction - cancelled due to user input"))
     }
-    //}
     let mut spinner = spinners::Spinner::new(spinners::Spinners::Dots8Bit, "Sending Solana transaction..".into());
     
     let transaction =
         Transaction::new(&[caller], message, connection.get_latest_blockhash().expect("can fetch recent blockhash"));
    
-    println!("{:?}", bincode::serialize(&transaction).unwrap().to_base64(b64::URL_SAFE));
-
 
     let try_transaction = connection.send_and_confirm_transaction(&transaction);
     if try_transaction.is_err() {
@@ -156,8 +151,6 @@ pub fn write_ocb(
     
     let created_pda = ProgramPubkey::create_program_address(&[seed.as_bytes(), caller.pubkey().to_bytes().as_slice(), &[bump_seed]], program_pubkey).unwrap();
    
-    println!("OCB PDA: {:?}", created_pda);
-
     let update_request = rhizo_types::SignedOnchainBytesUpdate {
         seed: seed.to_owned(),
         bytes: update_data.bytes.to_owned(),
@@ -181,7 +174,6 @@ pub fn write_ocb(
                                request_update_instruction.clone(), 
     ], Some(&caller.pubkey()));
 
-    //if false{
     
     let fee_lamports = connection.get_fee_calculator_for_blockhash(&connection.get_latest_blockhash().unwrap()).unwrap().unwrap().calculate_fee(&message);
     let rent_exemption = connection.get_minimum_balance_for_rent_exemption(request_update_instruction.data.len()).unwrap();
@@ -194,15 +186,15 @@ pub fn write_ocb(
     if !confirmation {
         return Err(Error::new("Unable to submit transaction - cancelled due to user input"))
     }
-    //}
+    
     let mut spinner = spinners::Spinner::new(spinners::Spinners::Dots8Bit, "Sending Solana transaction..".into());
     
     let transaction =
         Transaction::new(&[caller], message, connection.get_latest_blockhash().expect("can fetch recent blockhash"));
    
-    println!("{:?}", bincode::serialize(&transaction).unwrap().to_base64(b64::URL_SAFE));
+    //println!("{:?}", bincode::serialize(&transaction).unwrap().to_base64(b64::URL_SAFE));
 
-    /*
+    
     let try_transaction = connection.send_and_confirm_transaction(&transaction);
     if try_transaction.is_err() {
         println!("TransactionError {:?}", try_transaction);
@@ -220,7 +212,7 @@ pub fn write_ocb(
         };
         return Err(Error::new(error_message.as_str()))
     }
-    */
+    
     spinner.stop_with_symbol("🗸");
 
     Ok(()) 
@@ -337,6 +329,96 @@ pub fn update_route_data(
         return Err(Error::new("Unable to submit transaction - cancelled due to user input"))
     }
     //}
+    let mut spinner = spinners::Spinner::new(spinners::Spinners::Dots8Bit, "Sending Solana transaction..".into());
+    
+    let transaction =
+        Transaction::new(&[caller], message, connection.get_latest_blockhash().expect("can fetch recent blockhash"));
+
+    let try_transaction = connection.send_and_confirm_transaction(&transaction);
+    if try_transaction.is_err() {
+        println!("TransactionError {:?}", try_transaction);
+        let transaction_error = try_transaction.err().unwrap().get_transaction_error().unwrap();
+        let error_message = match transaction_error {
+            TransactionError::InstructionError(index, InstructionError::Custom(error_code)) => {
+                match (index, error_code) {
+                    (_, 0u32) => "Developer has reached the smart-contract's configured route limit.".to_string(),
+                    (_, 1u32) => "Nice try.".to_string(),
+                    _ => "Unsupported InstructionError code".to_string()
+                }
+            }
+            other => { other.to_string() }
+        };
+        println!("[ERROR]: {error_message}");
+        return Err(Error::new(error_message.as_str()))
+    }
+    spinner.stop_with_symbol("🗸");
+    Ok(()) 
+    
+}
+
+pub fn yank_route(
+    caller: &Keypair,
+    program_pubkey: &Pubkey,
+    connection: &RpcClient,
+    account_seed_string: &str,
+) -> Result<(), Error> {
+    let mut spinner = spinners::Spinner::new(spinners::Spinners::Dots8Bit, "Preparing Solana transaction..".into());
+    let dev_routes_seed = b"_dev_routes";
+
+    let account_seed_string = format!("route-{account_seed_string}");
+
+    let (_, bump_seed) = ProgramPubkey::find_program_address(
+        &[account_seed_string.as_bytes(),
+          caller.pubkey().to_bytes().as_slice()],
+          program_pubkey    
+    );
+
+    let (_, dev_routes_bump_seed) = ProgramPubkey::find_program_address(
+        &[dev_routes_seed,
+          caller.pubkey().to_bytes().as_slice()],
+          program_pubkey    
+    );
+
+    let created_pda = ProgramPubkey::create_program_address(&[account_seed_string.as_bytes(), caller.pubkey().to_bytes().as_slice(), &[bump_seed]], program_pubkey).unwrap();
+    let dev_routes_pda = ProgramPubkey::create_program_address(&[dev_routes_seed, caller.pubkey().to_bytes().as_slice(), &[dev_routes_bump_seed]], program_pubkey).unwrap();    
+
+    let request_update_data = rhizo_types::RouteUpdate {
+        route: account_seed_string.to_owned(),
+        bump_seed: Some(dev_routes_bump_seed),
+        operation: 1u8, //deprecated
+    };
+
+    let mut request_update_data_vec = 6u64.to_le_bytes().to_vec(); // Instruction marker for route data    
+
+    request_update_data_vec.extend(request_update_data.try_to_vec().expect("request update can be serialized"));
+
+    let request_update_instruction = Instruction {
+        program_id: program_pubkey.to_owned(),
+        accounts: vec![
+            AccountMeta { pubkey: caller.pubkey(), is_signer: true, is_writable: true },
+            AccountMeta { pubkey: dev_routes_pda, is_signer: false, is_writable: true },
+            AccountMeta { pubkey: created_pda, is_signer: false, is_writable: true},
+            AccountMeta { pubkey: system_program::id(), is_signer: false, is_writable: false }
+        ],
+        data: request_update_data_vec
+    };
+
+    let message = Message::new(&[
+            request_update_instruction.clone(), 
+    ], Some(&caller.pubkey()));
+
+    
+    let fee_lamports = connection.get_fee_calculator_for_blockhash(&connection.get_latest_blockhash().unwrap()).unwrap().unwrap().calculate_fee(&message);
+    spinner.stop_with_symbol("🗸");        
+    let confirmation = dialoguer::Confirm::new()
+        .with_prompt(format!("  Deploy route operation costs an estimated minimum of {:?} lamports, continue?", fee_lamports))
+        .interact()
+        .unwrap();
+
+    if !confirmation {
+        return Err(Error::new("Unable to submit transaction - cancelled due to user input"))
+    }
+    
     let mut spinner = spinners::Spinner::new(spinners::Spinners::Dots8Bit, "Sending Solana transaction..".into());
     
     let transaction =

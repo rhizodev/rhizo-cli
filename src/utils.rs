@@ -25,7 +25,7 @@ pub fn solana_config_path() -> Result<std::path::PathBuf, Error> {
         path.push(".config/solana/cli/config.yml");
         return Ok(path) 
     } 
-    Err(Error::new("somethin else"))
+    Err(Error::new("Unable to find home dir"))
 }
 
 pub fn get_config() -> Result<Option<Yaml>, Error> {
@@ -55,7 +55,7 @@ pub fn get_keypair() -> Result<Keypair, Error> {
                             .map_err(|_| Error::new("Could not parse file pointed to by keypath_pair as a Solana Keypair"))
                     }) 
             })
-            .map_err(|_| Error::new("blah"))
+            .map_err(|e| Error::new(e.to_string().as_str()))
     })
 }
 
@@ -85,7 +85,16 @@ pub fn parse_argument_type(argument_type: String) -> Result<ArgumentType, Error>
             "vec<f64>" => { return Ok(Array(CollectionType::F64)) }
             "vec<str>" => { return Ok(Array(CollectionType::Str)) }
             "vec<bool>" => { return Ok(Array(CollectionType::Bool)) }            
-            "vec<vec<u8>>" => { return Ok(Array(CollectionType::Array(NestedCollectionType::U8)))  }                        
+            "vec<vec<u8>>" => { return Ok(Array(CollectionType::Array(NestedCollectionType::U8)))  }
+            "vec<vec<u16>>" => { return Ok(Array(CollectionType::Array(NestedCollectionType::U16))) }
+            "vec<vec<u32>>" => { return Ok(Array(CollectionType::Array(NestedCollectionType::U32))) }
+            "vec<vec<u64>>" => { return Ok(Array(CollectionType::Array(NestedCollectionType::U64))) }
+            "vec<vec<i8>>" => { return Ok(Array(CollectionType::Array(NestedCollectionType::I8))) }
+            "vec<vec<i16>>" => { return Ok(Array(CollectionType::Array(NestedCollectionType::I16))) }
+            "vec<vec<i32>>" => { return Ok(Array(CollectionType::Array(NestedCollectionType::I32))) }
+            "vec<vec<i64>>" => { return Ok(Array(CollectionType::Array(NestedCollectionType::I64))) }
+            "vec<vec<f32>>" => { return Ok(Array(CollectionType::Array(NestedCollectionType::F32))) }
+            "vec<vec<f64>>" => { return Ok(Array(CollectionType::Array(NestedCollectionType::F64))) }
             "vec<vec<str>>" => { return Ok(Array(CollectionType::Array(NestedCollectionType::Str)))  }  
             other => {
                 return Err(Error::new(format!("Unsupported argument type {}", other).as_str()))
